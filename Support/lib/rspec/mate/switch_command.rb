@@ -3,6 +3,22 @@ module RSpec
     # This is based on Ruy Asan's initial code:
     # http://ruy.ca/posts/6-A-simple-switch-between-source-and-spec-file-command-for-textmate-with-auto-creation-
     class SwitchCommand
+      module StringHelpers
+        # From ActiveSupport
+        # File activesupport/lib/active_support/inflector/methods.rb, line 68
+        def camelize(term, uppercase_first_letter = true)
+          string = term.to_s
+          if uppercase_first_letter
+            string = string.sub(/^[a-z\d]*/) { $&.capitalize }
+          else
+            string = string.sub(/^(?:(?=\b|[A-Z_])|\w)/) { $&.downcase }
+          end
+          string.gsub(/(?:_|(\/))([a-z\d]*)/) { "#{$1}#{$2.capitalize}" }.gsub('/', '::')
+        end
+
+        module_function :camelize
+      end
+
       def go_to_twin(project_directory, filepath)
         other = twin(filepath)
 
@@ -146,7 +162,7 @@ HELPER
         content = <<-SPEC
 require 'spec_helper'
 
-describe #{path} do
+describe #{StringHelpers.camelize path.gsub(/^spec\/controllers\//, '').gsub(/_spec.rb$/, '')} do
 
 end
 SPEC
@@ -178,17 +194,17 @@ SPEC
 
       def write_and_open(path, content)
         `mkdir -p "#{File.dirname(path)}"`
-        
+
         File.open(path, 'w') do |f|
           f.write(content)
         end
-        
-        
+
+
         `"$TM_SUPPORT_PATH/bin/mate" "#{path}"`
         # `osascript &>/dev/null -e 'tell app "SystemUIServer" to activate' -e 'tell app "TextMate" to activate'`
-        # 
+        #
         # escaped_content = content.gsub("\n","\\n").gsub('$','\\$').gsub('"','\\\\\\\\\\\\"')
-        # 
+        #
         # `osascript &>/dev/null -e "tell app \\"TextMate\\" to insert \\"#{escaped_content}\\" as snippet true"`
       end
     end
